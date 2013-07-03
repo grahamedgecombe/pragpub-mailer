@@ -1,0 +1,68 @@
+#!/bin/sh -e
+
+# source configuration file
+CONFIG_FILE=/etc/pragpub-mailer.conf
+. $CONFIG_FILE
+
+# check if MAIL_FROM and MAIL_TO are set
+if [ -z "$MAIL_FROM" ]; then
+  cat >&2 <<EOF
+Please set MAIL_FROM in $CONFIG_FILE.
+EOF
+  exit 1
+fi
+
+if [ -z "$MAIL_TO" ]; then
+  cat >&2 <<EOF
+Please set MAIL_TO in $CONFIG_FILE.
+EOF
+  exit 1
+fi
+
+# check if the last-issue file exists
+LAST_ISSUE_FILE=/var/lib/pragpub-mailer/last-issue
+if [ ! -f "$LAST_ISSUE_FILE" ]; then
+  cat >&2 <<EOF
+The last-issue file does not exist. Please populate it with the number of the
+most recent issue of PragPub that you have read. For example, if the most
+recent issue you read was #48, then run the following command:
+
+  echo 48 > $LAST_ISSUE_FILE
+
+or if you are not root:
+
+  echo 48 | sudo tee $LAST_ISSUE_FILE
+EOF
+  exit 1
+fi
+
+# calculate next issue number
+last_issue=$(cat $LAST_ISSUE_FILE)
+issue=$(expr $last_issue + 1)
+
+# generate temporary directory to store the downloaded file in
+dir=$(mktemp -d)
+
+# calculate the local location and remote url for the downloaded file
+file=$dir/pragpub-$issue.mobi
+url="http://pragprog.com/magazines/download/$issue.mobi"
+
+# try to download the file
+final_url=$(curl -L -s -S -w "%{url_effective}" -o $file $url)
+
+# the pragpub website doesn't use a 404 if the file doesn't exist. instead, it
+# redirects to a different page! this if checks if we were not redirected, i.e.
+# the file does exist and has been downloaded.
+if [ "$final_url" != "$(echo $final_url | sed 's/mobi//g')" ]; then
+  # send off the email
+  mailx -a $file -s "PragPub Issue #$issue" -r $MAIL_FROM $MAIL_TO <<EOF
+Issue #$issue of PragPub has been attached to this message.
+EOF
+
+  # overwrite stored issue number
+  echo $issue > $LAST_ISSUE_FILE
+fi
+
+# clean up after ourselves
+rm $file
+rmdir $dir
