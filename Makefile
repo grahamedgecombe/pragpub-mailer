@@ -1,5 +1,5 @@
 NAME=pragpub-mailer
-VERSION=1.0.1
+VERSION=1.0.2
 PACKAGE=$(NAME).deb
 FILES=etc/cron.d/pragpub-mailer etc/pragpub-mailer.conf \
       usr/bin/pragpub-mailer var/lib/pragpub-mailer/

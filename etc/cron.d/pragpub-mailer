@@ -1,1 +1,1 @@
-0 5 * * * root /usr/bin/flock -n /run/lock/pragpub-mailer.lock /usr/bin/pragpub-mailer
+0 5 * * * root /usr/bin/flock -n /run/pragpub-mailer.lock /usr/bin/pragpub-mailer
